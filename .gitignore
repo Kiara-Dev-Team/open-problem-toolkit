@@ -1,0 +1,32 @@
+# Julia-specific files
+*.jl.cov
+*.jl.mem
+*.ji
+*.o
+*.so
+*.dylib
+*.dll
+*.a
+*.la
+*.dep
+*.log
+*.err
+*.out
+*.stackdump
+
+# Build artifacts and temporary files
+/build/
+/deps/build/
+/docs/build/
+/test/tmp/
+/tmp/
+
+# Editor and OS specific files
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*~
+
+# Manifest.toml
+Manifest.toml
