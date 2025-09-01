@@ -1,0 +1,14 @@
+[endpoint]
+host = "example.com"
+port = 443
+sni  = "example.com"
+
+[tls]
+# Acceptable aliases because provider strings differ
+acceptable_groups = ["X25519MLKEM768","X25519:MLKEM768","X25519Kyber768"]
+force_group_arg   = "X25519:MLKEM768"   # forwarded to openssl -groups
+
+[policy]
+kem_param = 768         # FIPS-203 ML-KEM parameter set
+combiner  = "concat+kdf" # ETSI TS 103 744 semantic
+hash      = "SHA256"     # switch to SHA384 for TLS_AES_256_GCM_SHA384
