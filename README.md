@@ -4,11 +4,12 @@ A comprehensive Julia toolkit for advanced cryptographic research and validation
 
 ## 🚀 Overview
 
-The Open Problem Toolkit provides three specialized packages for modern cryptographic research and development:
+The Open Problem Toolkit provides four specialized packages for modern cryptographic research and development:
 
 - **🔐 HomomorphicCryptography.jl** - Standards-compliant homomorphic encryption implementations
 - **🛡️ PQCValidator.jl** - Post-quantum cryptography validation for TLS 1.3
 - **🔍 ZKPValidator.jl** - Zero-knowledge proof protocol validation framework
+- **🔒 LibOQS.jl** - Julia bindings for the Open Quantum Safe library
 
 ## 📦 Package Structure
 
@@ -16,9 +17,11 @@ The Open Problem Toolkit provides three specialized packages for modern cryptogr
 open-problem-toolkit/
 ├── HomomorphicCryptography.jl/    # Homomorphic encryption library
 ├── PQCValidator.jl/               # Post-quantum crypto validator
-└── ZKPValidator.jl/               # Zero-knowledge proof validator
+├── ZKPValidator.jl/               # Zero-knowledge proof validator
+└── LibOQS.jl/                     # Open Quantum Safe Julia bindings
 ```
 
+## 🛠️ Installation
 
 ### Prerequisites
 - Julia 1.10 or later
@@ -46,6 +49,10 @@ julia --project=. -e "using Pkg; Pkg.instantiate()"
 # ZKPValidator.jl
 cd ../ZKPValidator.jl
 julia --project=. -e "using Pkg; Pkg.instantiate()"
+
+# LibOQS.jl
+cd ../LibOQS.jl
+julia --project=. -e "using Pkg; Pkg.instantiate()"
 ```
 
 ## 🧪 Testing
@@ -64,15 +71,20 @@ julia --project=. test/runtests.jl
 # Test ZKPValidator.jl
 cd ../ZKPValidator.jl
 julia --project=. test/runtests.jl
+
+# Test LibOQS.jl
+cd ../LibOQS.jl
+julia --project=. test/runtests.jl
 ```
 
 ## 📊 Project Status
 
 | Package | Status | Compliance | Use Case |
 |---------|--------|------------|----------|
-| HomomorphicCryptography.jl | ✅ Production Ready | ISO/IEC 18033-6:2019 | Privacy-preserving computation |
-| PQCValidator.jl | 🚧 Beta | TLS 1.3 PQC | Post-quantum security validation |
+| HomomorphicCryptography.jl | 🧪 Experimental | ISO/IEC 18033-6:2019 | Privacy-preserving computation |
+| PQCValidator.jl | 🧪 Experimental | TLS 1.3 PQC | Post-quantum security validation |
 | ZKPValidator.jl | 🧪 Experimental | Draft standards | Zero-knowledge proof research |
+| LibOQS.jl | 🧪 Experimental | NIST PQC Standards | Quantum-safe cryptographic algorithms |
 
 ## 🎯 Use Cases
 
@@ -92,6 +104,11 @@ julia --project=. test/runtests.jl
 - **Credential validation** - Verify qualifications without exposing details
 - **Blockchain privacy** - Enable private transactions and smart contracts
 
+### LibOQS Integration
+- **Algorithm evaluation** - Test NIST-standardized post-quantum algorithms
+- **Cryptographic research** - Experiment with quantum-safe key exchange and signatures
+- **Protocol development** - Build applications using standardized PQC primitives
+
 ## 🤝 Contributing
 
 We welcome contributions to all packages! Please see individual package documentation for specific contribution guidelines.
@@ -109,6 +126,7 @@ Detailed documentation is available in each package:
 - [HomomorphicCryptography.jl README](HomomorphicCryptography.jl/README.md)
 - [PQCValidator.jl README](PQCValidator.jl/README.md)
 - [ZKPValidator.jl README](ZKPValidator.jl/README.md)
+- [LibOQS.jl README](LibOQS.jl/README.md)
 
 ---
 
