@@ -1,0 +1,4 @@
+name = "LatticeBasedCryptography"
+uuid = "a20e3ca4-83c6-4ee0-a671-f2a23beb8d74"
+authors = ["SatoshiTerasaki <terasakisatoshi.math@gmail.com>"]
+version = "0.1.0"
