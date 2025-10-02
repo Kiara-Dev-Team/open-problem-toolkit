@@ -5,6 +5,22 @@ A comprehensive Julia toolkit for learning and implementing modern cryptographic
 Before this toolkit, developers had to build advanced cryptographic tools from scratch, which was time-consuming and difficult. The Open Problem Toolkit now provides ready-to-use security tools: HomomorphicCryptography.jl works with encrypted data without decrypting it, PQCValidator.jl tests defenses against quantum computer attacks, ZKPValidator.jl proves knowledge without revealing information, LibOQS.jl offers quantum-safe algorithms, and LatticeBasedCryptography.jl teaches quantum-resistant encryption methods. After adopting this toolkit, developers can quickly add cutting-edge privacy features without becoming cryptography experts.
 
 このツールキットが登場する前は、開発者は高度な暗号技術ツールを一から構築する必要があり、時間がかかり困難でした。The Open Problem Toolkitは現在、すぐに使えるセキュリティツールを提供しています。HomomorphicCryptography.jlは暗号化されたデータを復号化せずに処理し、PQCValidator.jlは量子コンピュータ攻撃に対する防御をテストし、ZKPValidator.jlは情報を明かさずに知識を証明し、LibOQS.jlは量子耐性アルゴリズムを提供し、LatticeBasedCryptography.jlは量子耐性暗号化手法を教えます。このツールキットを採用することで、開発者は暗号の専門家にならなくても、最先端のプライバシー機能を素早く追加できるようになります。
+1)Motivation for this “Open Problem Toolkit for PQC” Project 
+
+“PQC is difficult to understand. How can we make it easy and accessible for everyone?”
+(1-1) We want to understand the post-quantum cryptography(=PQC)
+(1-2)We build a toy version of PQC - in order to do 1 by touching and playing 
+(1-3)We want to build our own standard to measure the performance of PQC
+(1-4) We want to publish the difficult part of 3 and keep solving them with open science community
+(1-5)We keep distributing useful tools and research memos for 1-2-3 for everyone 
+
+(1) この「PQCオープン問題ツールキット」プロジェクトの動機
+「PQCは理解が難しい。どうすれば誰にとっても簡単でアクセスしやすいものにできるだろうか?」
+(1-1) 私たちは耐量子計算機暗号(=PQC)を理解したい
+(1-2) 私たちはPQCのトイバージョン(簡易版)を構築する - (1-1)を実際に触って遊ぶことで実現するため
+(1-3) 私たちはPQCの性能を測定するための独自の基準を構築したい
+(1-4) 私たちは(1-3)の難しい部分を公開し、オープンサイエンスコミュニティと共にそれらを解決し続けたい
+(1-5) 私たちは(1-1)〜(1-3)のための有用なツールと研究メモを、すべての人に配布し続ける
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Julia 1.10+](https://img.shields.io/badge/julia-1.10+-blue.svg)](https://julialang.org)
