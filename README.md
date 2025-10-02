@@ -19,6 +19,12 @@ The Open Problem Toolkit provides specialized packages for modern cryptographic 
 - **🔒 LibOQS.jl** - Access quantum-safe cryptographic algorithms through Julia bindings to the Open Quantum Safe library
 - **🧮 LatticeBasedCryptography.jl** - Learn lattice-based cryptography through interactive tools and visualizations
 
+🔐 HomomorphicCryptography.jl - 暗号化されたデータを復号化せずに計算を実行し、プライバシーを保護したクラウドコンピューティングを可能にします
+🛡️ PQCValidator.jl - 量子コンピュータ攻撃に対して、ポスト量子アルゴリズムを使用して暗号システムを検証します
+🔍 ZKPValidator.jl - 情報自体を明かさずに知識を証明します(例:生年月日を見せずに18歳以上であることを証明)
+🔒 LibOQS.jl - Open Quantum SafeライブラリへのJuliaバインディングを通じて、量子安全な暗号アルゴリズムにアクセスします
+🧮 LatticeBasedCryptography.jl - インタラクティブなツールと視覚化を通じて、格子ベース暗号を学習します
+
 ## 🎯 Use Cases
 
 ### Privacy-Preserving Healthcare
