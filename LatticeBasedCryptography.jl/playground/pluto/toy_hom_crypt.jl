@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.20.10
+# v0.20.8
 
 using Markdown
 using InteractiveUtils
@@ -48,58 +48,6 @@ R_Pq, ζ_Pq = let
 	R, S(x)
 end
 
-# ╔═╡ d8709278-414f-4ff3-85d8-1c501e5eb8be
-function generate_keys()
-	s = rand(Bool) + rand(Bool)ζq
-	a = rand(1:q) + rand(1:q)ζq
-	e = round(Int, rand(d)) + round(Int, rand(d))ζq
-	# cheating
-	e = zero(ζq)
-	b = a * s + 2 * e
-	return(s, (a, b), e)
-end
-
-# ╔═╡ ae5e9371-e53f-4ea3-97f8-2c7c00db9e71
-function enc(m, pk)
-	v = rand(Bool) + rand(Bool)ζq
-	e0 = round(Int, rand(d)) + round(Int, rand(d))ζq
-	e1 = round(Int, rand(d)) + round(Int, rand(d))ζq
-
-	# cheating
-	e0 = zero(ζq)
-	e1 = zero(ζq)
-
-	a, b = pk
-	
-	c0 = b * v + 2 * e0 + m
-	c1 = a * v + 2 * e1
-	return (c0, c1)
-end
-
-# ╔═╡ c1f2a5e3-8407-43e3-86f8-d3a3851f1e63
-function dec(c, sk)
-	c0, c1 = c
-	m̂ = c0 - sk * c1 
-	return m̂
-end
-
-# ╔═╡ 1e19f118-214b-4165-909f-dc603b459061
-begin
-	function adjust_representation(element_Z, q=q)
-		s = zero(ζ)
-		for i in eachindex(element_Z.data.coeffs)
-			s+= mod(
-				element_Z.data.coeffs[i], ceil(Int, -q/2)+1:ceil(Int,q/2)
-			) * ζ ^ (i-1)
-		end
-		s
-	end
-	
-	function adjust_representation(element_Z::BigInt, q=q)
-		return mod(element_Z, ceil(Int, -q/2)+1:ceil(Int,q/2))
-	end
-end
-
 # ╔═╡ 56fcbbaa-0768-49a4-9630-6561af2f5934
 begin
 	function modq2modPq(elem_in_q)
@@ -128,6 +76,23 @@ begin
 
 end
 
+# ╔═╡ 1e19f118-214b-4165-909f-dc603b459061
+begin
+	function adjust_representation(element_Z, q=q)
+		s = zero(ζ)
+		for i in eachindex(element_Z.data.coeffs)
+			s+= mod(
+				element_Z.data.coeffs[i], ceil(Int, -q/2)+1:ceil(Int,q/2)
+			) * ζ ^ (i-1)
+		end
+		s
+	end
+	
+	function adjust_representation(element_Z::BigInt, q=q)
+		return mod(element_Z, ceil(Int, -q/2)+1:ceil(Int,q/2))
+	end
+end
+
 # ╔═╡ b975f0c6-7031-475e-a2c2-3979d6d50f46
 begin
 	function modqasZ(target)
@@ -147,6 +112,54 @@ begin
 		end
 		return element_in_Z
 	end
+end
+
+# ╔═╡ 9397971b-0f0f-4eee-bd60-1034a6c980c0
+begin
+	function mymul_q(a, b)
+		Z2modq(adjust_representation(modqasZ(a)) * adjust_representation(modqasZ(b)))
+	end
+	
+	function myadd_q(a, b)
+		Z2modq(adjust_representation(modqasZ(a)) + adjust_representation(modqasZ(b)))
+	end
+end
+
+# ╔═╡ ae5e9371-e53f-4ea3-97f8-2c7c00db9e71
+function enc(m, pk)
+	v = rand(Bool) + rand(Bool)ζq
+	e0 = round(Int, rand(d)) + round(Int, rand(d))ζq
+	e1 = round(Int, rand(d)) + round(Int, rand(d))ζq
+
+	# cheating
+	#e0 = zero(ζq)
+	#e1 = zero(ζq)
+
+	a, b = pk
+	
+	c0 = myadd_q(mymul_q(b, v), myadd_q(2 * e0, m))
+	c1 = myadd_q(mymul_q(a, v), 2 * e1)
+	return (c0, c1)
+end
+
+# ╔═╡ c1f2a5e3-8407-43e3-86f8-d3a3851f1e63
+function dec(c, sk)
+	c0, c1 = c
+	m̂ = myadd_q(c0, mymul_q(-sk, c1))
+	return m̂
+end
+
+# ╔═╡ d8709278-414f-4ff3-85d8-1c501e5eb8be
+function generate_keys()
+	s = rand(Bool) + rand(Bool)ζq
+	a = rand(1:q) + rand(1:q)ζq
+	e = round(Int, rand(d)) + round(Int, rand(d))ζq
+	# cheating
+	# e = zero(ζq)
+	e = Z2modq(adjust_representation(modqasZ(e)))
+	b = myadd_q(mymul_q(a, s), 2 * e)
+	b = a * s + 2e
+	return(s, (a, b), e)
 end
 
 # ╔═╡ 28a55e24-43e4-41e5-927d-6d8114b86994
@@ -330,10 +343,6 @@ PLUTO_PROJECT_TOML_CONTENTS = """
 AbstractAlgebra = "c3fe647b-3220-5bb0-a1ea-a7954cac585d"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
-
-[compat]
-AbstractAlgebra = "~0.47.3"
-Distributions = "~0.25.120"
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000002
@@ -342,18 +351,19 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.11.7"
 manifest_format = "2.0"
-project_hash = "5328beacb7103150be2bafb1018d378af777a499"
+project_hash = "af3b6b905f027de734bd12831b35835bc4c4140d"
 
 [[deps.AbstractAlgebra]]
 deps = ["LinearAlgebra", "MacroTools", "Preferences", "Random", "RandomExtensions", "SparseArrays"]
-git-tree-sha1 = "dc5edff637f5e6737128ea226c32fa242ebba3c0"
+git-tree-sha1 = "303148d0b5d68b51a5d55a13fa96a860397cc9c3"
 uuid = "c3fe647b-3220-5bb0-a1ea-a7954cac585d"
-version = "0.47.3"
+version = "0.45.1"
 
     [deps.AbstractAlgebra.extensions]
     TestExt = "Test"
 
     [deps.AbstractAlgebra.weakdeps]
+    Requires = "ae029012-a4dd-5104-9daa-d747884805df"
     Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [[deps.AliasTables]]
@@ -366,6 +376,20 @@ version = "1.1.3"
 uuid = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
 version = "1.11.0"
 
+[[deps.Base64]]
+uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
+version = "1.11.0"
+
+[[deps.Compat]]
+deps = ["TOML", "UUIDs"]
+git-tree-sha1 = "8ae8d32e09f0dcf42a36b90d4e17f5dd2e4c4215"
+uuid = "34da2185-b29b-5c13-b0c7-acf172513d20"
+version = "4.16.0"
+weakdeps = ["Dates", "LinearAlgebra"]
+
+    [deps.Compat.extensions]
+    CompatLinearAlgebraExt = "LinearAlgebra"
+
 [[deps.CompilerSupportLibraries_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "e66e0078-7015-5450-92f7-15fbd957f2ae"
@@ -377,10 +401,10 @@ uuid = "9a962f9c-6df0-11e9-0e5d-c546b8b5ee8a"
 version = "1.16.0"
 
 [[deps.DataStructures]]
-deps = ["OrderedCollections"]
-git-tree-sha1 = "6c72198e6a101cccdd4c9731d3985e904ba26037"
+deps = ["Compat", "InteractiveUtils", "OrderedCollections"]
+git-tree-sha1 = "4e1fe97fdaed23e9dc21d4d664bea76b65fc50a0"
 uuid = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
-version = "0.19.1"
+version = "0.18.22"
 
 [[deps.Dates]]
 deps = ["Printf"]
@@ -410,9 +434,9 @@ version = "0.9.5"
 
 [[deps.FillArrays]]
 deps = ["LinearAlgebra"]
-git-tree-sha1 = "173e4d8f14230a7523ae11b9a3fa9edb3e0efd78"
+git-tree-sha1 = "6a70198746448456524cb442b8af316927ff3e1a"
 uuid = "1a297f60-69ca-5386-bcde-b61e274b549b"
-version = "1.14.0"
+version = "1.13.0"
 weakdeps = ["PDMats", "SparseArrays", "Statistics"]
 
     [deps.FillArrays.extensions]
@@ -426,6 +450,11 @@ git-tree-sha1 = "68c173f4f449de5b438ee67ed0c9c748dc31a2ec"
 uuid = "34004b35-14d8-5ef3-9330-4cdb6864b03a"
 version = "0.3.28"
 
+[[deps.InteractiveUtils]]
+deps = ["Markdown"]
+uuid = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
+version = "1.11.0"
+
 [[deps.IrrationalConstants]]
 git-tree-sha1 = "e2222959fbc6c19554dc15174c81bf7bf3aa691c"
 uuid = "92d709cd-6900-40b7-9082-c6be49f344b6"
@@ -433,9 +462,9 @@ version = "0.2.4"
 
 [[deps.JLLWrappers]]
 deps = ["Artifacts", "Preferences"]
-git-tree-sha1 = "0533e564aae234aff59ab625543145446d8b6ec2"
+git-tree-sha1 = "a007feb38b422fbdab534406aeca1b86823cb4d6"
 uuid = "692b3bcd-3c85-4b1f-b108-f13ce0eb3210"
-version = "1.7.1"
+version = "1.7.0"
 
 [[deps.Libdl]]
 uuid = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
@@ -466,6 +495,11 @@ version = "0.3.29"
 git-tree-sha1 = "1e0228a030642014fe5cfe68c2c0a818f9e3f522"
 uuid = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
 version = "0.5.16"
+
+[[deps.Markdown]]
+deps = ["Base64"]
+uuid = "d6f4376e-aef5-505a-96c1-9c027394607a"
+version = "1.11.0"
 
 [[deps.Missings]]
 deps = ["DataAPI"]
@@ -502,9 +536,9 @@ version = "0.11.35"
 
 [[deps.Preferences]]
 deps = ["TOML"]
-git-tree-sha1 = "0f27480397253da18fe2c12a4ba4eb9eb208bf3d"
+git-tree-sha1 = "9306f6085165d270f7e3db02af26a400d580f5c6"
 uuid = "21216c6a-2e73-6563-6e65-726566657250"
-version = "1.5.0"
+version = "1.4.3"
 
 [[deps.Printf]]
 deps = ["Unicode"]
@@ -566,9 +600,9 @@ version = "1.11.0"
 
 [[deps.SortingAlgorithms]]
 deps = ["DataStructures"]
-git-tree-sha1 = "64d974c2e6fdf07f8155b5b2ca2ffa9069b608d9"
+git-tree-sha1 = "66e0a8e672a0bdfca2c3f5937efb8538b9ddc085"
 uuid = "a2af1166-a08f-5f64-846c-94a0d3cef48c"
-version = "1.2.2"
+version = "1.2.1"
 
 [[deps.SparseArrays]]
 deps = ["Libdl", "LinearAlgebra", "Random", "Serialization", "SuiteSparse_jll"]
@@ -605,9 +639,9 @@ version = "1.7.1"
 
 [[deps.StatsBase]]
 deps = ["AliasTables", "DataAPI", "DataStructures", "LinearAlgebra", "LogExpFunctions", "Missings", "Printf", "Random", "SortingAlgorithms", "SparseArrays", "Statistics", "StatsAPI"]
-git-tree-sha1 = "2c962245732371acd51700dbb268af311bddd719"
+git-tree-sha1 = "b81c5035922cc89c2d9523afc6c54be512411466"
 uuid = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
-version = "0.34.6"
+version = "0.34.5"
 
 [[deps.StatsFuns]]
 deps = ["HypergeometricFunctions", "IrrationalConstants", "LogExpFunctions", "Reexport", "Rmath", "SpecialFunctions"]
@@ -637,6 +671,11 @@ deps = ["Dates"]
 uuid = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 version = "1.0.3"
 
+[[deps.UUIDs]]
+deps = ["Random", "SHA"]
+uuid = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
+version = "1.11.0"
+
 [[deps.Unicode]]
 uuid = "4ec0a83e-493e-50e2-b9ac-8f72acf5a8f5"
 version = "1.11.0"
@@ -654,13 +693,14 @@ version = "5.11.0+0"
 # ╠═e5f0ed76-9b3a-4669-9f8c-fb33be246a50
 # ╠═08dce129-ae70-4782-a0cd-495750046135
 # ╠═4e45298c-9f1d-40fb-a640-b817bcec05ea
+# ╠═56fcbbaa-0768-49a4-9630-6561af2f5934
+# ╠═9397971b-0f0f-4eee-bd60-1034a6c980c0
+# ╠═1e19f118-214b-4165-909f-dc603b459061
 # ╠═d8709278-414f-4ff3-85d8-1c501e5eb8be
 # ╠═ae5e9371-e53f-4ea3-97f8-2c7c00db9e71
 # ╠═c1f2a5e3-8407-43e3-86f8-d3a3851f1e63
-# ╠═1e19f118-214b-4165-909f-dc603b459061
 # ╠═28a55e24-43e4-41e5-927d-6d8114b86994
 # ╠═7e291995-3ca6-4f7c-92ac-b65d18284c76
-# ╠═56fcbbaa-0768-49a4-9630-6561af2f5934
 # ╠═b975f0c6-7031-475e-a2c2-3979d6d50f46
 # ╠═54fca652-f121-43e6-837b-5677687bbd2c
 # ╠═8af74ae7-7f19-4b15-8a16-e91f603fda26
