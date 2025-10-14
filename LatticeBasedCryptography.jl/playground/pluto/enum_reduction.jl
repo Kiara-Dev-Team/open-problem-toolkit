@@ -142,24 +142,15 @@ function find_svp_by_enum(B)
 	g = GSOData(B)
 	n = size(B, 2)
 	volL = abs(det(B))
+	
 	minkowski_thm1_upperbound = √(n) * volL ^ (1/n)
-	r = minkowski_thm1_upperbound
-	R² = [r^2 for _ in 1:n]
+	R² = [minkowski_thm1_upperbound^2 for _ in 1:n]
+
+	R²ₙ = ε * norm(g.B⃗[:, 1]) ^ 2
+	R² = [k * R²ₙ / n for k in 1:n]
+	
 	μ = g.R
 	B⃗ = g.B⃗
-	coeff, is_succeeded = enum_algorithm(μ, B⃗, R²)
-	v = zeros(eltype(B), n)
-	@test is_succeeded
-	for i in eachindex(coeff)
-		v += coeff[i] * B[:, i]
-	end
-
-	r = ε * norm(v)
-	R² = [r^2 for _ in 1:n]
-	μ = g.R
-	B⃗ = g.B⃗
-	coeff, is_succeeded = enum_algorithm(μ, B⃗, R²)
-
 	v = zeros(eltype(B), n)
 	while true
 		coeff, is_succeeded = enum_algorithm(μ, B⃗, R²)
@@ -168,8 +159,8 @@ function find_svp_by_enum(B)
 			for i in eachindex(coeff)
 				v += coeff[i] * B[:, i]
 			end
-			r = ε * norm(v)
-			R² = [r^2 for _ in 1:n]
+			R²ₙ = ε * (norm(v) ^ 2)
+			R² = [R²ₙ for k in 1:n]
 		else
 			return v
 		end
