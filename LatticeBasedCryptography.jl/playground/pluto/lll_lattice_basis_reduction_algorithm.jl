@@ -24,7 +24,7 @@ begin
 		R::Matrix{F}
 	end
 	
-	function gso(B::AbstractMatrix)
+	function GSOData(B::AbstractMatrix)
 		F = qr(B)
 		R̃ = F.R
 		for i in axes(R̃, 1)
@@ -71,13 +71,13 @@ begin
 			-3 -7 -10
 			-7 -7  0
 		]
-		Q = gso(B).Q
+		Q = GSOData(B).Q
 		B_reduced = [
 			5  -3 1
 			-3 -4 -3
 			-7 0 7
 		]
-		Q_reduced = gso(B_reduced).Q
+		Q_reduced = GSOData(B_reduced).Q
 		@test isapprox(Q, Q_reduced, atol=1e-14)
 	end
 end
@@ -113,7 +113,7 @@ function LLL_reduce!(B::AbstractMatrix, δ::Real)
 	if !(0.25 < δ < 1)
 		throw(ArgumentError("Input δ must satisfy 0.25 < δ < 1"))
 	end
-	g = gso(B)
+	g = GSOData(B)
 	k = 2
 	n = size(g.B, 2)
 	while k ≤ n
