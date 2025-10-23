@@ -180,7 +180,7 @@ begin
 		g
 	end
 	
-	function LLL_reduce!(B::AbstractMatrix, δ::Real)
+	function LLL_reduce(B::AbstractMatrix, δ::Real)
 		if !(0.25 < δ < 1)
 			throw(ArgumentError("Input δ must satisfy 0.25 < δ < 1"))
 		end
@@ -200,7 +200,7 @@ begin
 				k = max(k-1, 2)
 			end
 		end
-		g
+		return g
 	end
 end
 
@@ -324,9 +324,40 @@ function MLLL_reduce!(ℬ::AbstractMatrix{T}, δ::Float64) where {T}
 	end
 end
 
+# ╔═╡ a6c717b5-0ba2-4fa4-9da7-2ed8950e8cef
+function find_svp_by_enum(B)
+	ε = 0.99
+	g = GSOData(B)
+	n = size(B, 2)
+	volL = abs(det(B))
+	
+	minkowski_thm1_upperbound = √(n) * volL ^ (1/n)
+	R² = [minkowski_thm1_upperbound^2 for _ in 1:n]
+
+	R²ₙ = ε * norm(g.B⃗[:, 1]) ^ 2
+	R² = [k * R²ₙ / n for k in 1:n]
+	
+	μ = g.R
+	B⃗ = g.B⃗
+	v = zeros(eltype(B), n)
+	while true
+		coeff, is_succeeded = ENUM_reduce(μ, B⃗, R²)
+		if is_succeeded
+			fill!(v, zero(eltype(B)))
+			for i in eachindex(coeff)
+				v += coeff[i] * B[:, i]
+			end
+			R²ₙ = ε * (norm(v) ^ 2)
+			R² = [R²ₙ for k in 1:n]
+		else
+			return coeff
+		end
+	end
+end
+
 # ╔═╡ fad8d91f-0216-4712-ac84-cb15cf5cb905
 function BKZ_reduction!(B::AbstractMatrix, β::Integer, δ::Real)
-	g = LLL_reduce!(B, δ)
+	g = LLL_reduce(B, δ)
 	B .= g.B
 	n = size(B, 2)
 	z = 0
@@ -335,9 +366,7 @@ function BKZ_reduction!(B::AbstractMatrix, β::Integer, δ::Real)
 		k = mod(k, n-1) + 1
 		l = min(k + β - 1, n)
 		h = min(l + 1, n)
-		R² = [0.99 * g.B⃗[1] for _ in eachindex(g.B⃗)]
-		(coeff, is_suceeded) = ENUM_reduce(g.Q, g.B⃗, R²)
-		@assert is_suceeded
+		coeff = find_svp_by_enum(B)
 		v = zeros(eltype(B), n)
 		for i in eachindex(coeff)
 			v += coeff[i] * B[:, i]
@@ -352,16 +381,20 @@ function BKZ_reduction!(B::AbstractMatrix, β::Integer, δ::Real)
 			πₖv_norm2 += cj ^ 2 * g.B⃗[j]
 		end
 		
+		#=
 		if norm(g.Q[:, k]) > sqrt(πₖv_norm2)
+			@info "case 1"
 			z = 0
 			Bsub = hcat((B[:, i] for i in 1:k-1)..., v, (B[:, i] for i in k:h)...)
 			MLLL_reduce!(Bsub, δ)
 			B[:, 1:h] .= Bsub[:, 1:h]
 		else
+		=#
+			@info "case 2"
 			z += 1
-			g′ = LLL_reduce!((@view B[:, 1:h]), δ)
+			g′ = LLL_reduce((@view B[:, 1:h]), δ)
 			B[:, 1:h] = g′.B
-		end
+		#end
 	end # while
 	B
 end
@@ -381,7 +414,8 @@ begin
 		      2   16  -55  -30   98  -16   80   93  -98   20
 		]
 	
-	B = BKZ_reduction!(B, 2, 0.75)
+	g = BKZ_reduction!(B, 2, 0.75)
+	B
 end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
@@ -494,6 +528,7 @@ version = "5.13.1+1"
 # ╠═9acc4eb8-bbce-445a-8775-e34d8dfe9d4b
 # ╠═86981bab-8291-4406-87c2-d0b997a9de90
 # ╠═c6eb0aa3-c592-43dd-96cd-db86c9cc157a
+# ╠═a6c717b5-0ba2-4fa4-9da7-2ed8950e8cef
 # ╠═fad8d91f-0216-4712-ac84-cb15cf5cb905
 # ╠═209d5b79-f621-40da-bb56-2cb6f6d479e2
 # ╟─00000000-0000-0000-0000-000000000001
