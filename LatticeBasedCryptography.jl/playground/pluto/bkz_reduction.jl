@@ -353,27 +353,13 @@ function find_svp_by_enum(B, k, l)
 	g = GSOData(B)
 	n = size(B, 2)
 
-	R²ₙ = ε * g.B⃗[k]
+	R²ₙ = ε * maximum(g.B⃗[k:l])
 	R² = [R²ₙ for k in k:l]
 	
 	μ = g.R[k:l,k:l]
 	B⃗ = g.B⃗[k:l]
-	v = zeros(eltype(B), n)
-	coeff_prev = zeros(float(eltype(B)), length(k:l))
-	while true
-		coeff, is_succeeded = ENUM_reduce(μ, B⃗, R²)
-		if is_succeeded
-			coeff_prev .= coeff
-			fill!(v, zero(eltype(B)))
-			for i in eachindex(coeff)
-				v += coeff[i] * B[:, i]
-			end
-			R²ₙ = ε * (norm(v) ^ 2)
-			R² = [R²ₙ for k in k:l]
-		else
-			return coeff_prev
-		end
-	end
+	coeff, is_succeeded = ENUM_reduce(μ, B⃗, R²)
+	return coeff
 end
 
 # ╔═╡ fad8d91f-0216-4712-ac84-cb15cf5cb905
@@ -383,16 +369,18 @@ function BKZ_reduction!(B::AbstractMatrix, β::Integer, δ::Real)
 	n = size(B, 2)
 	z = 0
 	k = 0
-	#while z < n - 1
-	for goma in 1:10
+	while z < n - 1
 		k = mod(k, n-1) + 1
 		l = min(k + β - 1, n)
 		h = min(l + 1, n)
-		coeff = find_svp_by_enum(B,k,l)
+		@info "find_svp_by_enum start" k l
+		coeff = find_svp_by_enum(B, k, l)
+		@info "find_svp_by_enum end"
 		v = zeros(eltype(B), n)
 		for (i, idx_k_to_l) in enumerate(k:l)
 			v += coeff[i] * B[:, idx_k_to_l]
 		end
+		@info v
 
 		g = GSOData(B)
 		
@@ -400,15 +388,12 @@ function BKZ_reduction!(B::AbstractMatrix, β::Integer, δ::Real)
 		for i = k:n
 			πₖv_norm2 += dot(v, g.Q[:, i]) ^ 2 / dot(g.Q[:, i], g.Q[:, i])
 		end
-		
-		if norm(g.Q[:, k]) > sqrt(πₖv_norm2)
-			@info "case 1"
+		@info norm(g.Q[:, k]) sqrt(πₖv_norm2)
+		if norm(g.Q[:, k]) > sqrt(πₖv_norm2) + 0.001
+			@info "case 1" h
 			z = 0
 			Bsub = hcat((B[:, i] for i in 1:k-1)..., v, (B[:, i] for i in k:h)...)
-			@info Bsub
-			@info "MLLL_reduce start"
 			MLLL_reduce!(Bsub, δ)
-			@info "MLLL_reduce end"
 			B[:, 1:h] .= Bsub[:, 1:h]
 		else
 			@info "case 2"
@@ -429,10 +414,9 @@ begin
 		84  -32   0 60 57
 		61  -52 -63 52 -2
 	]
-	
-	g = BKZ_reduction!(B, 2, 0.75)
+	g = BKZ_reduction!(B, 3, 0.75)
 	B
-end
+end 
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
