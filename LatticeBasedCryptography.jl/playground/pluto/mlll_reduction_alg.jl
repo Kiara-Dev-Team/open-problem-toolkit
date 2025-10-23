@@ -35,7 +35,7 @@ begin
 	end
 	
 	
-	function MLLL_reduce!(ℬ::AbstractMatrix{T}, δ::Float64) where {T}
+	function _MLLL_reduce!(ℬ::AbstractMatrix{T}, δ::Float64) where {T}
 	    h = size(ℬ, 2)
 	    z = h
 	    g = 1
@@ -54,12 +54,11 @@ begin
 	        # 0 列なら末尾と交換して z を詰める
 	        if iszerovec(b_g)
 	            if g < z
-	                tmp = copy(b_g)
+	                v = ℬ[:, g]
 	                ℬ[:, g] .= ℬ[:, z]
-	                ℬ[:, z] .= tmp
+	                ℬ[:, z] .= v
 	            end
 	            z -= 1
-	            continue
 	        end
 	
 	        # GSO: b_g* を直交化
@@ -72,10 +71,9 @@ begin
 	            Q[:, g] .-= μ_ig .* b_i_ast
 	        end
 	        B⃗[g] = dot((@view Q[:, g]), (@view Q[:, g]))
-	
 	        if g == 1
 	            g = 2
-	            continue
+				continue
 	        end
 	
 	        # --- MLLL 本体 ---
@@ -96,9 +94,9 @@ begin
 	            else
 	                if iszerovec(@view ℬ[:, k])
 	                    if k < z
-	                        tmp = copy(@view ℬ[:, k])
+	                        v = ℬ[:, k]
 	                        ℬ[:, k] .= ℬ[:, z]
-	                        ℬ[:, z] .= tmp
+	                        ℬ[:, z] .= v
 	                    end
 	                    z -= 1
 	                    g = k
@@ -109,7 +107,7 @@ begin
 	                        R[j, k], R[j, k - 1] = R[j, k - 1], R[j, k]
 	                    end
 	
-	                    if B != 0
+	                    if !(B ≈ 0)
 	                        if B⃗[k] ≈ 0
 	                            B⃗[k] = B
 	                            Q[:, k - 1] .= ν .* Q[:, k - 1]
@@ -120,7 +118,7 @@ begin
 	                        else
 	                            t = B⃗[k - 1] / B
 	                            R[k - 1, k] = ν * t
-	                            w = copy(Q[:, k - 1])
+	                            w = Q[:, k - 1]
 	                            Q[:, k - 1] .= Q[:, k] .+ ν .* w
 	                            B⃗[k - 1] = B
 	                            if k ≤ l
@@ -128,18 +126,16 @@ begin
 	                                B⃗[k] *= t
 	                            end
 	                            for i = k+1:l
-	                                t2 = R[k, i]
-	                                R[k, i]     = R[k - 1, i] - ν * t2
-	                                R[k - 1, i] = t2 + R[k - 1, k] * R[k, i]
+	                                t = R[k, i]
+	                                R[k, i]     = R[k - 1, i] - ν * t
+	                                R[k - 1, i] = t + R[k - 1, k] * R[k, i]
 	                            end
 	                        end
 	                    else
 	                        B⃗[k], B⃗[k - 1] = B⃗[k - 1], B⃗[k]
 	                        Q[:, k], Q[:, k - 1] = Q[:, k - 1], Q[:, k]
 	                        for i = k+1:l
-	                            t2 = R[k, i]
-	                            R[k, i]     = R[k - 1, i] - ν * t2
-	                            R[k - 1, i] = t2 + R[k - 1, k] * R[k, i]
+	                            R[k, i], R[k - 1, i] = R[k-1, i], R[k, i]
 	                        end
 	                    end
 	                    k = max(k - 1, 2)
@@ -152,7 +148,31 @@ begin
 	        end
 	    end
 	end
-	
+end
+
+# ╔═╡ 49fa805b-ba1e-4ac6-abd9-1e2261a41f3c
+function MLLL_reduce!(B, δ)
+	g_target_j = typemax(Int)
+	while true
+		_MLLL_reduce!(B, δ)
+		target_j = -1
+		for j in size(B, 2):-1:1
+			if iszerovec(B[:, j])
+				target_j = j
+			end
+		end
+		if target_j == g_target_j
+			break
+		end
+		if target_j < 0
+			break
+		end
+		
+		_MLLL_reduce!((@view B[:, 1:target_j]), δ)
+		g_target_j = target_j
+		break
+	end
+	B
 end
 
 # ╔═╡ e400d08f-4173-4534-a256-813842ff7dd8
@@ -166,9 +186,9 @@ let
 	]
 	MLLL_reduce!(ℬ, δ)
 	expected = [
-		 -1   1  -2   3  0
+		 -1   1  -1   3  0
 		  0  -1  -4  -1  0
-		 -1  -1   1  -3  0
+		 -1  -1   2  -3  0
 		  0  -3   0   2  0
 	]
 	@test ℬ == expected
@@ -185,10 +205,10 @@ let
 	]
 	MLLL_reduce!(ℬ, δ)
 	@test ℬ == [
-		 1   0   0  -2   0  0
-		 0   1  -1   0  -1  0
-		 0  -1   0   0  -1  0
-		 0   0   1   0  -1  0
+		 1   0   0   0  0  0
+		 0   1  -1  -1  0  0
+		 0  -1   0  -1  0  0
+		 0   0   1  -1  0  0
 	]
 end
 
@@ -203,7 +223,7 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.12.1"
+julia_version = "1.12.0"
 manifest_format = "2.0"
 project_hash = "daa57a5ae35ddc41f805b1b81e5a5b0171a8b179"
 
@@ -278,12 +298,13 @@ version = "1.11.0"
 [[deps.libblastrampoline_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "8e850b90-86db-534c-a0d3-1478176c7d93"
-version = "5.15.0+0"
+version = "5.13.1+1"
 """
 
 # ╔═╡ Cell order:
 # ╠═11cfb05a-aefa-11f0-bb95-6fb5f8337028
 # ╠═9e1cb7bf-f309-406c-8d6f-7f8004bfb729
+# ╠═49fa805b-ba1e-4ac6-abd9-1e2261a41f3c
 # ╠═e400d08f-4173-4534-a256-813842ff7dd8
 # ╠═86e5aa33-3eee-4da5-b10d-969b500c8a3c
 # ╟─00000000-0000-0000-0000-000000000001
