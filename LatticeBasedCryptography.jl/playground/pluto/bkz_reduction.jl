@@ -319,6 +319,7 @@ begin
 	        end
 	    end
 	end
+	
 	function MLLL_reduce!(B, δ)
 		g_target_j = typemax(Int)
 		while true
@@ -346,22 +347,19 @@ begin
 end
 
 # ╔═╡ a6c717b5-0ba2-4fa4-9da7-2ed8950e8cef
-function find_svp_by_enum(B)
+function find_svp_by_enum(B, k, l)
+	@assert k < l
 	ε = 0.99
 	g = GSOData(B)
 	n = size(B, 2)
-	volL = abs(det(B))
-	
-	minkowski_thm1_upperbound = √(n) * volL ^ (1/n)
-	R² = [minkowski_thm1_upperbound^2 for _ in 1:n]
 
-	R²ₙ = ε * norm(g.B⃗[:, 1]) ^ 2
-	R² = [k * R²ₙ / n for k in 1:n]
+	R²ₙ = ε * g.B⃗[k]
+	R² = [R²ₙ for k in k:l]
 	
-	μ = g.R
-	B⃗ = g.B⃗
+	μ = g.R[k:l,k:l]
+	B⃗ = g.B⃗[k:l]
 	v = zeros(eltype(B), n)
-	coeff_prev = zeros(float(eltype(B)), n)
+	coeff_prev = zeros(float(eltype(B)), length(k:l))
 	while true
 		coeff, is_succeeded = ENUM_reduce(μ, B⃗, R²)
 		if is_succeeded
@@ -371,7 +369,7 @@ function find_svp_by_enum(B)
 				v += coeff[i] * B[:, i]
 			end
 			R²ₙ = ε * (norm(v) ^ 2)
-			R² = [R²ₙ for k in 1:n]
+			R² = [R²ₙ for k in k:l]
 		else
 			return coeff_prev
 		end
@@ -385,39 +383,39 @@ function BKZ_reduction!(B::AbstractMatrix, β::Integer, δ::Real)
 	n = size(B, 2)
 	z = 0
 	k = 0
-	while z < n - 1
+	#while z < n - 1
+	for goma in 1:10
 		k = mod(k, n-1) + 1
 		l = min(k + β - 1, n)
 		h = min(l + 1, n)
-		coeff = find_svp_by_enum(B) # TODO: 部分行列で行う．not entire matrix B
+		coeff = find_svp_by_enum(B,k,l)
 		v = zeros(eltype(B), n)
-		for i in eachindex(coeff)
-			v += coeff[i] * B[:, i]
+		for (i, idx_k_to_l) in enumerate(k:l)
+			v += coeff[i] * B[:, idx_k_to_l]
 		end
 
+		g = GSOData(B)
+		
 		πₖv_norm2 = 0
-		for j = k:n
-			cj = coeff[j]
-			for i = (j+1):n
-				cj += g.R[j, i] * coeff[i]
-			end
-			πₖv_norm2 += cj ^ 2 * g.B⃗[j]
+		for i = k:n
+			πₖv_norm2 += dot(v, g.Q[:, i]) ^ 2 / dot(g.Q[:, i], g.Q[:, i])
 		end
-		#=
-		@info norm(g.Q[:, k]) sqrt(πₖv_norm2)
+		
 		if norm(g.Q[:, k]) > sqrt(πₖv_norm2)
 			@info "case 1"
 			z = 0
 			Bsub = hcat((B[:, i] for i in 1:k-1)..., v, (B[:, i] for i in k:h)...)
+			@info Bsub
+			@info "MLLL_reduce start"
 			MLLL_reduce!(Bsub, δ)
+			@info "MLLL_reduce end"
 			B[:, 1:h] .= Bsub[:, 1:h]
 		else
-		=#
 			@info "case 2"
 			z += 1
 			g′ = LLL_reduce((@view B[:, 1:h]), δ)
 			B[:, 1:h] = g′.B
-		#end
+		end
 	end # while
 	B
 end
@@ -425,17 +423,12 @@ end
 # ╔═╡ 209d5b79-f621-40da-bb56-2cb6f6d479e2
 begin
 	B = [
-		    -79   43   -1  -58   84   -1   19  -58   17   93
-		     35  -64  -97  -38  -61   34   16  -17   31   -6
-		     31  -37  -91   87   93   58   52   99   78   -7
-		     83  -31  -43   42  -67  -38   32   93   53  -12
-		    -66  -27   19   94    3   29  -20  -49   40   79
-		     35   -7  -21  -83   94   67   55  -53  -22  -40
-		    -32  -42  -65   66   31  -18   94   24  -39   27
-		     46   21  -36  -69   27   15  -34   51    7  -95
-		     21   16   34   -2  -60  -75    4    5   70   98
-		      2   16  -55  -30   98  -16   80   93  -98   20
-		]
+		63  74  93  93 33
+		-14 -20 -46 11 -93
+		-1  23  -19 13 12
+		84  -32   0 60 57
+		61  -52 -63 52 -2
+	]
 	
 	g = BKZ_reduction!(B, 2, 0.75)
 	B
@@ -456,7 +449,7 @@ OffsetArrays = "~1.17.0"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.12.0"
+julia_version = "1.12.1"
 manifest_format = "2.0"
 project_hash = "ce995e5c35e8d6524e2067c5cd1237b720050f47"
 
@@ -542,7 +535,7 @@ version = "1.11.0"
 [[deps.libblastrampoline_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "8e850b90-86db-534c-a0d3-1478176c7d93"
-version = "5.13.1+1"
+version = "5.15.0+0"
 """
 
 # ╔═╡ Cell order:

@@ -141,12 +141,7 @@ function find_svp_by_enum(B)
 	ε = 0.99
 	g = GSOData(B)
 	n = size(B, 2)
-	volL = abs(det(B))
-	
-	minkowski_thm1_upperbound = √(n) * volL ^ (1/n)
-	R² = [minkowski_thm1_upperbound^2 for _ in 1:n]
-
-	R²ₙ = ε * norm(g.B⃗[:, 1]) ^ 2
+	R²ₙ = ε * norm(g.B⃗[1])
 	R² = [k * R²ₙ / n for k in 1:n]
 	
 	μ = g.R
