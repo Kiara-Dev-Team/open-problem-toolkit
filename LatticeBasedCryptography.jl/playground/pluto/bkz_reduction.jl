@@ -205,122 +205,143 @@ begin
 end
 
 # ╔═╡ c6eb0aa3-c592-43dd-96cd-db86c9cc157a
-function MLLL_reduce!(ℬ::AbstractMatrix{T}, δ::Float64) where {T}
-	h = size(ℬ, 2)
-	z = h
-	g = 1
-
-	# GSO 用のワーク
-	Q = float(T).(ℬ)
-	R = zeros(eltype(Q), size(ℬ))
-	for i in 1:min(size(R, 1), size(R, 2))
-		R[i, i] = 1
+begin
+	function _MLLL_reduce!(ℬ::AbstractMatrix{T}, δ::Float64) where {T}
+	    h = size(ℬ, 2)
+	    z = h
+	    g = 1
+	
+	    # GSO 用のワーク
+	    Q = float(T).(ℬ)
+	    R = zeros(eltype(Q), size(ℬ))
+	    for i in 1:min(size(R, 1), size(R, 2))
+	        R[i, i] = 1
+	    end
+	    B⃗ = zeros(eltype(Q), size(ℬ, 2))
+	
+	    while g ≤ z
+	        b_g = @view ℬ[:, g]
+	
+	        # 0 列なら末尾と交換して z を詰める
+	        if iszerovec(b_g)
+	            if g < z
+	                v = ℬ[:, g]
+	                ℬ[:, g] .= ℬ[:, z]
+	                ℬ[:, z] .= v
+	            end
+	            z -= 1
+	        end
+	
+	        # GSO: b_g* を直交化
+	        Q[:, g] .= ℬ[:, g]
+	        for i = 1:g-1
+	            b_i_ast = @view Q[:, i]
+	            B_i = dot(b_i_ast, b_i_ast)
+	            μ_ig = dot(Q[:, g], b_i_ast) / B_i
+	            R[i, g] = μ_ig
+	            Q[:, g] .-= μ_ig .* b_i_ast
+	        end
+	        B⃗[g] = dot((@view Q[:, g]), (@view Q[:, g]))
+	        if g == 1
+	            g = 2
+				continue
+	        end
+	
+	        # --- MLLL 本体 ---
+	        l = g
+	        k = g
+	        startagain = false
+	        while (k ≤ l) && !startagain
+	            partial_size_reduce!(ℬ, R, k - 1, k)
+	
+	            ν = R[k - 1, k]
+	            B = B⃗[k] + ν^2 * B⃗[k - 1]
+	
+	            if B ≥ δ * B⃗[k - 1]
+	                for j = k - 2:-1:1
+	                    partial_size_reduce!(ℬ, R, j, k)
+	                end
+	                k += 1
+	            else
+	                if iszerovec(@view ℬ[:, k])
+	                    if k < z
+	                        v = ℬ[:, k]
+	                        ℬ[:, k] .= ℬ[:, z]
+	                        ℬ[:, z] .= v
+	                    end
+	                    z -= 1
+	                    g = k
+	                    startagain = true
+	                else
+	                    ℬ[:, k - 1], ℬ[:, k] = ℬ[:, k], ℬ[:, k - 1]
+	                    for j = 1:k-2
+	                        R[j, k], R[j, k - 1] = R[j, k - 1], R[j, k]
+	                    end
+	
+	                    if !(B ≈ 0)
+	                        if B⃗[k] ≈ 0
+	                            B⃗[k] = B
+	                            Q[:, k - 1] .= ν .* Q[:, k - 1]
+	                            R[k - 1, k] = inv(ν)
+	                            for i = k+1:l
+	                                R[k - 1, i] /= ν
+	                            end
+	                        else
+	                            t = B⃗[k - 1] / B
+	                            R[k - 1, k] = ν * t
+	                            w = Q[:, k - 1]
+	                            Q[:, k - 1] .= Q[:, k] .+ ν .* w
+	                            B⃗[k - 1] = B
+	                            if k ≤ l
+	                                Q[:, k] .= -R[k - 1, k] .* Q[:, k] .+ (B⃗[k] / B) .* w
+	                                B⃗[k] *= t
+	                            end
+	                            for i = k+1:l
+	                                t = R[k, i]
+	                                R[k, i]     = R[k - 1, i] - ν * t
+	                                R[k - 1, i] = t + R[k - 1, k] * R[k, i]
+	                            end
+	                        end
+	                    else
+	                        B⃗[k], B⃗[k - 1] = B⃗[k - 1], B⃗[k]
+	                        Q[:, k], Q[:, k - 1] = Q[:, k - 1], Q[:, k]
+	                        for i = k+1:l
+	                            R[k, i], R[k - 1, i] = R[k-1, i], R[k, i]
+	                        end
+	                    end
+	                    k = max(k - 1, 2)
+	                end
+	            end
+	        end
+	
+	        if !startagain
+	            g += 1
+	        end
+	    end
 	end
-	B⃗ = zeros(eltype(Q), size(ℬ, 2))
-
-	while g ≤ z
-		b_g = @view ℬ[:, g]
-
-		# 0 列なら末尾と交換して z を詰める
-		if iszerovec(b_g)
-			if g < z
-				tmp = copy(b_g)
-				ℬ[:, g] .= ℬ[:, z]
-				ℬ[:, z] .= tmp
-			end
-			z -= 1
-			continue
-		end
-
-		# GSO: b_g* を直交化
-		Q[:, g] .= ℬ[:, g]
-		for i = 1:g-1
-			b_i_ast = @view Q[:, i]
-			B_i = dot(b_i_ast, b_i_ast)
-			μ_ig = dot(Q[:, g], b_i_ast) / B_i
-			R[i, g] = μ_ig
-			Q[:, g] .-= μ_ig .* b_i_ast
-		end
-		B⃗[g] = dot((@view Q[:, g]), (@view Q[:, g]))
-
-		if g == 1
-			g = 2
-			continue
-		end
-
-		# --- MLLL 本体 ---
-		l = g
-		k = g
-		startagain = false
-		while (k ≤ l) && !startagain
-			partial_size_reduce!(ℬ, R, k - 1, k)
-
-			ν = R[k - 1, k]
-			B = B⃗[k] + ν^2 * B⃗[k - 1]
-
-			if B ≥ δ * B⃗[k - 1]
-				for j = k - 2:-1:1
-					partial_size_reduce!(ℬ, R, j, k)
-				end
-				k += 1
-			else
-				if iszerovec(@view ℬ[:, k])
-					if k < z
-						tmp = copy(@view ℬ[:, k])
-						ℬ[:, k] .= ℬ[:, z]
-						ℬ[:, z] .= tmp
-					end
-					z -= 1
-					g = k
-					startagain = true
-				else
-					ℬ[:, k - 1], ℬ[:, k] = ℬ[:, k], ℬ[:, k - 1]
-					for j = 1:k-2
-						R[j, k], R[j, k - 1] = R[j, k - 1], R[j, k]
-					end
-
-					if B != 0
-						if B⃗[k] ≈ 0
-							B⃗[k] = B
-							Q[:, k - 1] .= ν .* Q[:, k - 1]
-							R[k - 1, k] = inv(ν)
-							for i = k+1:l
-								R[k - 1, i] /= ν
-							end
-						else
-							t = B⃗[k - 1] / B
-							R[k - 1, k] = ν * t
-							w = copy(Q[:, k - 1])
-							Q[:, k - 1] .= Q[:, k] .+ ν .* w
-							B⃗[k - 1] = B
-							if k ≤ l
-								Q[:, k] .= -R[k - 1, k] .* Q[:, k] .+ (B⃗[k] / B) .* w
-								B⃗[k] *= t
-							end
-							for i = k+1:l
-								t2 = R[k, i]
-								R[k, i]     = R[k - 1, i] - ν * t2
-								R[k - 1, i] = t2 + R[k - 1, k] * R[k, i]
-							end
-						end
-					else
-						B⃗[k], B⃗[k - 1] = B⃗[k - 1], B⃗[k]
-						Q[:, k], Q[:, k - 1] = Q[:, k - 1], Q[:, k]
-						for i = k+1:l
-							t2 = R[k, i]
-							R[k, i]     = R[k - 1, i] - ν * t2
-							R[k - 1, i] = t2 + R[k - 1, k] * R[k, i]
-						end
-					end
-					k = max(k - 1, 2)
+	function MLLL_reduce!(B, δ)
+		g_target_j = typemax(Int)
+		while true
+			_MLLL_reduce!(B, δ)
+			target_j = -1
+			for j in size(B, 2):-1:1
+				if iszerovec(@view B[:, j])
+					target_j = j
 				end
 			end
+			
+			if target_j < 0
+				break
+			end
+			if target_j == g_target_j
+				break
+			end
+			
+			_MLLL_reduce!((@view B[:, 1:target_j]), δ)
+			g_target_j = target_j
+			break
 		end
-
-		if !startagain
-			g += 1
-		end
-		return ℬ
+		B
 	end
 end
 
@@ -340,9 +361,11 @@ function find_svp_by_enum(B)
 	μ = g.R
 	B⃗ = g.B⃗
 	v = zeros(eltype(B), n)
+	coeff_prev = zeros(float(eltype(B)), n)
 	while true
 		coeff, is_succeeded = ENUM_reduce(μ, B⃗, R²)
 		if is_succeeded
+			coeff_prev .= coeff
 			fill!(v, zero(eltype(B)))
 			for i in eachindex(coeff)
 				v += coeff[i] * B[:, i]
@@ -350,7 +373,7 @@ function find_svp_by_enum(B)
 			R²ₙ = ε * (norm(v) ^ 2)
 			R² = [R²ₙ for k in 1:n]
 		else
-			return coeff
+			return coeff_prev
 		end
 	end
 end
@@ -366,7 +389,7 @@ function BKZ_reduction!(B::AbstractMatrix, β::Integer, δ::Real)
 		k = mod(k, n-1) + 1
 		l = min(k + β - 1, n)
 		h = min(l + 1, n)
-		coeff = find_svp_by_enum(B)
+		coeff = find_svp_by_enum(B) # TODO: 部分行列で行う．not entire matrix B
 		v = zeros(eltype(B), n)
 		for i in eachindex(coeff)
 			v += coeff[i] * B[:, i]
@@ -380,8 +403,8 @@ function BKZ_reduction!(B::AbstractMatrix, β::Integer, δ::Real)
 			end
 			πₖv_norm2 += cj ^ 2 * g.B⃗[j]
 		end
-		
 		#=
+		@info norm(g.Q[:, k]) sqrt(πₖv_norm2)
 		if norm(g.Q[:, k]) > sqrt(πₖv_norm2)
 			@info "case 1"
 			z = 0

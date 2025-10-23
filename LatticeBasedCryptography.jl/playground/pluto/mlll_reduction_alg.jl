@@ -148,31 +148,30 @@ begin
 	        end
 	    end
 	end
-end
-
-# ╔═╡ 49fa805b-ba1e-4ac6-abd9-1e2261a41f3c
-function MLLL_reduce!(B, δ)
-	g_target_j = typemax(Int)
-	while true
-		_MLLL_reduce!(B, δ)
-		target_j = -1
-		for j in size(B, 2):-1:1
-			if iszerovec(B[:, j])
-				target_j = j
+	function MLLL_reduce!(B, δ)
+		g_target_j = typemax(Int)
+		while true
+			_MLLL_reduce!(B, δ)
+			target_j = -1
+			for j in size(B, 2):-1:1
+				if iszerovec(@view B[:, j])
+					target_j = j
+				end
 			end
-		end
-		if target_j == g_target_j
+			
+			if target_j < 0
+				break
+			end
+			if target_j == g_target_j
+				break
+			end
+			
+			_MLLL_reduce!((@view B[:, 1:target_j]), δ)
+			g_target_j = target_j
 			break
 		end
-		if target_j < 0
-			break
-		end
-		
-		_MLLL_reduce!((@view B[:, 1:target_j]), δ)
-		g_target_j = target_j
-		break
+		B
 	end
-	B
 end
 
 # ╔═╡ e400d08f-4173-4534-a256-813842ff7dd8
@@ -192,6 +191,7 @@ let
 		  0  -3   0   2  0
 	]
 	@test ℬ == expected
+	@test det(ℬ[:, 1:minimum(size(ℬ))]) ≠ 0
 end
 
 # ╔═╡ 86e5aa33-3eee-4da5-b10d-969b500c8a3c
@@ -210,6 +210,7 @@ let
 		 0  -1   0  -1  0  0
 		 0   0   1  -1  0  0
 	]
+	@test det(ℬ[:, 1:minimum(size(ℬ))]) ≠ 0
 end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
@@ -304,7 +305,6 @@ version = "5.13.1+1"
 # ╔═╡ Cell order:
 # ╠═11cfb05a-aefa-11f0-bb95-6fb5f8337028
 # ╠═9e1cb7bf-f309-406c-8d6f-7f8004bfb729
-# ╠═49fa805b-ba1e-4ac6-abd9-1e2261a41f3c
 # ╠═e400d08f-4173-4534-a256-813842ff7dd8
 # ╠═86e5aa33-3eee-4da5-b10d-969b500c8a3c
 # ╟─00000000-0000-0000-0000-000000000001
