@@ -373,14 +373,15 @@ function BKZ_reduction!(B::AbstractMatrix, β::Integer, δ::Real)
 		k = mod(k, n-1) + 1
 		l = min(k + β - 1, n)
 		h = min(l + 1, n)
-		@info "find_svp_by_enum start" k l
 		coeff = find_svp_by_enum(B, k, l)
-		@info "find_svp_by_enum end"
+		if iszerovec(coeff)
+			@info "coeff got zero vector"
+			break
+		end
 		v = zeros(eltype(B), n)
 		for (i, idx_k_to_l) in enumerate(k:l)
 			v += coeff[i] * B[:, idx_k_to_l]
 		end
-		@info v
 
 		g = GSOData(B)
 		
@@ -388,25 +389,21 @@ function BKZ_reduction!(B::AbstractMatrix, β::Integer, δ::Real)
 		for i = k:n
 			πₖv_norm2 += dot(v, g.Q[:, i]) ^ 2 / dot(g.Q[:, i], g.Q[:, i])
 		end
-		@info norm(g.Q[:, k]) sqrt(πₖv_norm2)
 		if norm(g.Q[:, k]) > sqrt(πₖv_norm2) + 0.001
-			@info "case 1" h
 			z = 0
 			Bsub = hcat((B[:, i] for i in 1:k-1)..., v, (B[:, i] for i in k:h)...)
 			MLLL_reduce!(Bsub, δ)
 			B[:, 1:h] .= Bsub[:, 1:h]
 		else
-			@info "case 2"
 			z += 1
 			g′ = LLL_reduce((@view B[:, 1:h]), δ)
 			B[:, 1:h] = g′.B
 		end
 	end # while
-	B
 end
 
 # ╔═╡ 209d5b79-f621-40da-bb56-2cb6f6d479e2
-begin
+let
 	B = [
 		63  74  93  93 33
 		-14 -20 -46 11 -93
@@ -414,9 +411,28 @@ begin
 		84  -32   0 60 57
 		61  -52 -63 52 -2
 	]
-	g = BKZ_reduction!(B, 3, 0.75)
+	BKZ_reduction!(B, 3, 0.75)
 	B
 end 
+
+# ╔═╡ dc1f8ffa-4fca-4d68-8053-a17e7aab3586
+let
+	B = BigInt[
+		    -79   43   -1  -58   84   -1   19  -58   17   93
+		     35  -64  -97  -38  -61   34   16  -17   31   -6
+		     31  -37  -91   87   93   58   52   99   78   -7
+		     83  -31  -43   42  -67  -38   32   93   53  -12
+		    -66  -27   19   94    3   29  -20  -49   40   79
+		     35   -7  -21  -83   94   67   55  -53  -22  -40
+		    -32  -42  -65   66   31  -18   94   24  -39   27
+		     46   21  -36  -69   27   15  -34   51    7  -95
+		     21   16   34   -2  -60  -75    4    5   70   98
+		      2   16  -55  -30   98  -16   80   93  -98   20
+	]
+	@info minimum([norm(B[:, i]) for i in axes(B, 2)])
+	BKZ_reduction!(B, 3, 0.75)
+	norm(B[:, 1])
+end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -531,5 +547,6 @@ version = "5.15.0+0"
 # ╠═a6c717b5-0ba2-4fa4-9da7-2ed8950e8cef
 # ╠═fad8d91f-0216-4712-ac84-cb15cf5cb905
 # ╠═209d5b79-f621-40da-bb56-2cb6f6d479e2
+# ╠═dc1f8ffa-4fca-4d68-8053-a17e7aab3586
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
